@@ -1,0 +1,358 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 600px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#482374", "id": "games", "label": "games", "shape": "dot", "size": 22.460111963217727, "title": "PageRank: 0.00249"}, {"color": "#482374", "id": "nba", "label": "nba", "shape": "dot", "size": 22.425827848226, "title": "PageRank: 0.00249"}, {"color": "#482475", "id": "subredditdrama", "label": "subredditdrama", "shape": "dot", "size": 22.82250263646953, "title": "PageRank: 0.00256"}, {"color": "#3d4d8a", "id": "ukraine", "label": "ukraine", "shape": "dot", "size": 39.411444380008824, "title": "PageRank: 0.00588"}, {"color": "#482374", "id": "globaloffensive", "label": "globaloffensive", "shape": "dot", "size": 22.06811595984142, "title": "PageRank: 0.00241"}, {"color": "#443983", "id": "science", "label": "science", "shape": "dot", "size": 30.83024735779363, "title": "PageRank: 0.00417"}, {"color": "#433d84", "id": "gaming", "label": "gaming", "shape": "dot", "size": 32.645019045617914, "title": "PageRank: 0.00453"}, {"color": "#30698e", "id": "videos", "label": "videos", "shape": "dot", "size": 52.32444432113528, "title": "PageRank: 0.00846"}, {"color": "#2e6e8e", "id": "worldnews", "label": "worldnews", "shape": "dot", "size": 54.73730442984086, "title": "PageRank: 0.00895"}, {"color": "#375b8d", "id": "pics", "label": "pics", "shape": "dot", "size": 45.571192232905055, "title": "PageRank: 0.00711"}, {"color": "#424086", "id": "nfl", "label": "nfl", "shape": "dot", "size": 33.828523406757654, "title": "PageRank: 0.00477"}, {"color": "#482374", "id": "android", "label": "android", "shape": "dot", "size": 22.390820155571557, "title": "PageRank: 0.00248"}, {"color": "#453581", "id": "explainlikeimfive", "label": "explainlikeimfive", "shape": "dot", "size": 29.7642301061048, "title": "PageRank: 0.00395"}, {"color": "#482878", "id": "tifu", "label": "tifu", "shape": "dot", "size": 24.1388332827922, "title": "PageRank: 0.00283"}, {"color": "#424086", "id": "writingprompts", "label": "writingprompts", "shape": "dot", "size": 33.96799218050808, "title": "PageRank: 0.00479"}, {"color": "#482475", "id": "gifs", "label": "gifs", "shape": "dot", "size": 22.783784697421087, "title": "PageRank: 0.00256"}, {"color": "#433d84", "id": "adviceanimals", "label": "adviceanimals", "shape": "dot", "size": 32.58332043586256, "title": "PageRank: 0.00452"}, {"color": "#34618d", "id": "todayilearned", "label": "todayilearned", "shape": "dot", "size": 48.5805157824922, "title": "PageRank: 0.00772"}, {"color": "#fde725", "id": "askreddit", "label": "askreddit", "shape": "dot", "size": 135.2254786427809, "title": "PageRank: 0.02505"}, {"color": "#365d8d", "id": "iama", "label": "iama", "shape": "dot", "size": 46.574526049327744, "title": "PageRank: 0.00731"}, {"color": "#3c508b", "id": "relationships", "label": "relationships", "shape": "dot", "size": 40.9243485781782, "title": "PageRank: 0.00618"}, {"color": "#463480", "id": "leagueoflegends", "label": "leagueoflegends", "shape": "dot", "size": 29.013534137917237, "title": "PageRank: 0.00380"}, {"color": "#39568c", "id": "news", "label": "news", "shape": "dot", "size": 43.64098618397434, "title": "PageRank: 0.00673"}, {"color": "#482878", "id": "movies", "label": "movies", "shape": "dot", "size": 24.435278392613327, "title": "PageRank: 0.00289"}, {"color": "#453882", "id": "politics", "label": "politics", "shape": "dot", "size": 30.465159943413866, "title": "PageRank: 0.00409"}, {"color": "#482878", "id": "technology", "label": "technology", "shape": "dot", "size": 24.329897926938667, "title": "PageRank: 0.00287"}, {"color": "#482475", "id": "showerthoughts", "label": "showerthoughts", "shape": "dot", "size": 22.926327817601322, "title": "PageRank: 0.00259"}, {"color": "#38588c", "id": "funny", "label": "funny", "shape": "dot", "size": 44.416466846727204, "title": "PageRank: 0.00688"}, {"color": "#472c7a", "id": "the_donald", "label": "the_donald", "shape": "dot", "size": 25.53312006826262, "title": "PageRank: 0.00311"}, {"color": "#46337f", "id": "wtf", "label": "wtf", "shape": "dot", "size": 28.4247889891804, "title": "PageRank: 0.00368"}]);
+                  edges = new vis.DataSet([{"from": "games", "to": "gaming", "value": 1}, {"from": "games", "to": "leagueoflegends", "value": 1}, {"from": "nba", "to": "nfl", "value": 1}, {"from": "subredditdrama", "to": "games", "value": 13}, {"from": "subredditdrama", "to": "iama", "value": 7}, {"from": "subredditdrama", "to": "leagueoflegends", "value": 14}, {"from": "subredditdrama", "to": "funny", "value": 8}, {"from": "subredditdrama", "to": "pics", "value": 12}, {"from": "subredditdrama", "to": "technology", "value": 5}, {"from": "subredditdrama", "to": "politics", "value": 16}, {"from": "subredditdrama", "to": "askreddit", "value": 7}, {"from": "subredditdrama", "to": "relationships", "value": 16}, {"from": "subredditdrama", "to": "gifs", "value": 4}, {"from": "subredditdrama", "to": "writingprompts", "value": 2}, {"from": "subredditdrama", "to": "nba", "value": 5}, {"from": "subredditdrama", "to": "nfl", "value": 2}, {"from": "subredditdrama", "to": "explainlikeimfive", "value": 2}, {"from": "subredditdrama", "to": "android", "value": 1}, {"from": "subredditdrama", "to": "adviceanimals", "value": 8}, {"from": "subredditdrama", "to": "news", "value": 13}, {"from": "subredditdrama", "to": "science", "value": 1}, {"from": "subredditdrama", "to": "wtf", "value": 5}, {"from": "subredditdrama", "to": "gaming", "value": 8}, {"from": "subredditdrama", "to": "movies", "value": 4}, {"from": "subredditdrama", "to": "todayilearned", "value": 2}, {"from": "subredditdrama", "to": "videos", "value": 9}, {"from": "subredditdrama", "to": "worldnews", "value": 10}, {"from": "subredditdrama", "to": "globaloffensive", "value": 7}, {"from": "subredditdrama", "to": "showerthoughts", "value": 3}, {"from": "subredditdrama", "to": "tifu", "value": 2}, {"from": "subredditdrama", "to": "the_donald", "value": 2}, {"from": "globaloffensive", "to": "gaming", "value": 3}, {"from": "globaloffensive", "to": "games", "value": 1}, {"from": "globaloffensive", "to": "leagueoflegends", "value": 1}, {"from": "globaloffensive", "to": "showerthoughts", "value": 1}, {"from": "gaming", "to": "askreddit", "value": 3}, {"from": "gaming", "to": "iama", "value": 1}, {"from": "gaming", "to": "showerthoughts", "value": 1}, {"from": "gaming", "to": "leagueoflegends", "value": 1}, {"from": "explainlikeimfive", "to": "todayilearned", "value": 10}, {"from": "explainlikeimfive", "to": "funny", "value": 3}, {"from": "explainlikeimfive", "to": "politics", "value": 2}, {"from": "explainlikeimfive", "to": "askreddit", "value": 9}, {"from": "explainlikeimfive", "to": "pics", "value": 8}, {"from": "explainlikeimfive", "to": "videos", "value": 4}, {"from": "explainlikeimfive", "to": "technology", "value": 2}, {"from": "explainlikeimfive", "to": "gifs", "value": 3}, {"from": "explainlikeimfive", "to": "movies", "value": 2}, {"from": "explainlikeimfive", "to": "wtf", "value": 3}, {"from": "explainlikeimfive", "to": "science", "value": 3}, {"from": "explainlikeimfive", "to": "adviceanimals", "value": 1}, {"from": "explainlikeimfive", "to": "iama", "value": 1}, {"from": "explainlikeimfive", "to": "news", "value": 3}, {"from": "explainlikeimfive", "to": "tifu", "value": 2}, {"from": "explainlikeimfive", "to": "worldnews", "value": 1}, {"from": "explainlikeimfive", "to": "showerthoughts", "value": 1}, {"from": "tifu", "to": "askreddit", "value": 2}, {"from": "tifu", "to": "gaming", "value": 1}, {"from": "tifu", "to": "todayilearned", "value": 1}, {"from": "tifu", "to": "showerthoughts", "value": 2}, {"from": "tifu", "to": "movies", "value": 1}, {"from": "tifu", "to": "wtf", "value": 1}, {"from": "writingprompts", "to": "askreddit", "value": 56}, {"from": "writingprompts", "to": "showerthoughts", "value": 21}, {"from": "writingprompts", "to": "todayilearned", "value": 25}, {"from": "writingprompts", "to": "adviceanimals", "value": 5}, {"from": "writingprompts", "to": "gifs", "value": 5}, {"from": "writingprompts", "to": "videos", "value": 10}, {"from": "writingprompts", "to": "iama", "value": 4}, {"from": "writingprompts", "to": "movies", "value": 4}, {"from": "writingprompts", "to": "gaming", "value": 2}, {"from": "writingprompts", "to": "pics", "value": 3}, {"from": "writingprompts", "to": "science", "value": 4}, {"from": "writingprompts", "to": "technology", "value": 4}, {"from": "writingprompts", "to": "worldnews", "value": 7}, {"from": "writingprompts", "to": "funny", "value": 6}, {"from": "writingprompts", "to": "wtf", "value": 3}, {"from": "writingprompts", "to": "explainlikeimfive", "value": 2}, {"from": "writingprompts", "to": "tifu", "value": 2}, {"from": "writingprompts", "to": "news", "value": 3}, {"from": "askreddit", "to": "pics", "value": 9}, {"from": "askreddit", "to": "politics", "value": 2}, {"from": "askreddit", "to": "iama", "value": 2}, {"from": "askreddit", "to": "funny", "value": 14}, {"from": "askreddit", "to": "adviceanimals", "value": 16}, {"from": "askreddit", "to": "worldnews", "value": 6}, {"from": "askreddit", "to": "videos", "value": 18}, {"from": "askreddit", "to": "news", "value": 7}, {"from": "askreddit", "to": "todayilearned", "value": 13}, {"from": "askreddit", "to": "relationships", "value": 1}, {"from": "askreddit", "to": "wtf", "value": 9}, {"from": "askreddit", "to": "showerthoughts", "value": 5}, {"from": "askreddit", "to": "technology", "value": 3}, {"from": "askreddit", "to": "gifs", "value": 2}, {"from": "askreddit", "to": "science", "value": 1}, {"from": "askreddit", "to": "movies", "value": 1}, {"from": "iama", "to": "politics", "value": 1}, {"from": "iama", "to": "pics", "value": 5}, {"from": "iama", "to": "science", "value": 1}, {"from": "iama", "to": "funny", "value": 1}, {"from": "iama", "to": "gifs", "value": 3}, {"from": "iama", "to": "worldnews", "value": 1}, {"from": "iama", "to": "videos", "value": 2}, {"from": "iama", "to": "movies", "value": 1}, {"from": "iama", "to": "news", "value": 1}, {"from": "iama", "to": "technology", "value": 1}, {"from": "relationships", "to": "adviceanimals", "value": 1}, {"from": "relationships", "to": "tifu", "value": 1}, {"from": "leagueoflegends", "to": "askreddit", "value": 1}, {"from": "leagueoflegends", "to": "todayilearned", "value": 1}, {"from": "leagueoflegends", "to": "iama", "value": 1}, {"from": "leagueoflegends", "to": "science", "value": 1}, {"from": "news", "to": "ukraine", "value": 1}, {"from": "movies", "to": "pics", "value": 1}, {"from": "movies", "to": "todayilearned", "value": 1}, {"from": "movies", "to": "gifs", "value": 1}, {"from": "politics", "to": "android", "value": 1}, {"from": "politics", "to": "news", "value": 1}, {"from": "technology", "to": "science", "value": 1}, {"from": "technology", "to": "videos", "value": 1}, {"from": "showerthoughts", "to": "videos", "value": 2}, {"from": "showerthoughts", "to": "science", "value": 4}, {"from": "showerthoughts", "to": "nfl", "value": 1}, {"from": "showerthoughts", "to": "news", "value": 3}, {"from": "showerthoughts", "to": "technology", "value": 1}, {"from": "showerthoughts", "to": "wtf", "value": 2}, {"from": "showerthoughts", "to": "pics", "value": 4}, {"from": "showerthoughts", "to": "funny", "value": 4}, {"from": "showerthoughts", "to": "todayilearned", "value": 3}, {"from": "showerthoughts", "to": "worldnews", "value": 2}, {"from": "showerthoughts", "to": "android", "value": 2}, {"from": "the_donald", "to": "politics", "value": 3}, {"from": "the_donald", "to": "worldnews", "value": 4}, {"from": "the_donald", "to": "askreddit", "value": 3}, {"from": "the_donald", "to": "showerthoughts", "value": 1}, {"from": "the_donald", "to": "iama", "value": 2}, {"from": "the_donald", "to": "videos", "value": 1}, {"from": "the_donald", "to": "news", "value": 2}, {"from": "the_donald", "to": "pics", "value": 1}, {"from": "the_donald", "to": "wtf", "value": 1}, {"from": "the_donald", "to": "technology", "value": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "forceAtlas2Based": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.01,
+            "damping": 0.4,
+            "gravitationalConstant": -50,
+            "springConstant": 0.08,
+            "springLength": 100
+        },
+        "solver": "forceAtlas2Based",
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
